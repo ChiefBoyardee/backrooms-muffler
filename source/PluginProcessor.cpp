@@ -7,6 +7,7 @@ constexpr auto corner = "corner";
 constexpr auto hall = "hall";
 constexpr auto depth = "depth";
 constexpr auto mix = "mix";
+constexpr auto muffle = "muffle";
 } // namespace ParamIDs
 
 juce::AudioProcessorValueTreeState::ParameterLayout BackroomsMufflerAudioProcessor::createParameterLayout()
@@ -39,6 +40,13 @@ juce::AudioProcessorValueTreeState::ParameterLayout BackroomsMufflerAudioProcess
         "Mix",
         juce::NormalisableRange<float> { 0.0f, 100.0f, 0.1f },
         50.0f,
+        juce::AudioParameterFloatAttributes().withLabel ("%")));
+
+    layout.add (std::make_unique<juce::AudioParameterFloat> (
+        juce::ParameterID { ParamIDs::muffle, 1 },
+        "Muffle",
+        juce::NormalisableRange<float> { 0.0f, 100.0f, 0.1f },
+        0.0f,
         juce::AudioParameterFloatAttributes().withLabel ("%")));
 
     return layout;
@@ -79,7 +87,8 @@ void BackroomsMufflerAudioProcessor::processBlock (juce::AudioBuffer<float>& buf
         apvts.getRawParameterValue (ParamIDs::corner)->load(),
         apvts.getRawParameterValue (ParamIDs::hall)->load(),
         apvts.getRawParameterValue (ParamIDs::depth)->load(),
-        apvts.getRawParameterValue (ParamIDs::mix)->load());
+        apvts.getRawParameterValue (ParamIDs::mix)->load(),
+        apvts.getRawParameterValue (ParamIDs::muffle)->load());
 
     backroomsProcessor.process (buffer);
 }

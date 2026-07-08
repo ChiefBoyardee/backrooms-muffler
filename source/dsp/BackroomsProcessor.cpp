@@ -18,6 +18,16 @@ constexpr float kMaxPredelayMs = 70.0f;
 constexpr float kMinHallHfCutoffHz = 2500.0f;
 constexpr float kMaxHallHfCutoffHz = 7000.0f;
 
+constexpr float kMuffleMinCutoffHz = 250.0f;
+constexpr float kMuffleMaxCutoffHz = 8000.0f;
+constexpr float kMuffleMidPeakHz = 320.0f;
+constexpr float kMuffleMidPeakQ = 1.1f;
+constexpr float kMuffleMaxMidDb = 3.0f;
+constexpr float kMuffleMinDrive = 1.0f;
+constexpr float kMuffleMaxDrive = 4.0f;
+constexpr float kMuffleMinThresholdDb = -30.0f;
+constexpr float kMuffleMaxThresholdDb = -8.0f;
+
 float lerp (float a, float b, float t) noexcept
 {
     return a + (b - a) * t;
@@ -46,9 +56,13 @@ void BackroomsProcessor::prepare (const juce::dsp::ProcessSpec& spec)
     lowPass2.prepare (spec);
     midPeak.prepare (spec);
     hallHighShelf.prepare (spec);
+    muffleLpf1.prepare (spec);
+    muffleLpf2.prepare (spec);
+    muffleMidPeak.prepare (spec);
     predelay.prepare (spec);
     reverb.prepare (spec);
     compressor.prepare (spec);
+    muffleCompressor.prepare (spec);
 
     const auto maxPredelaySamples = static_cast<int> (std::ceil (sampleRate * kMaxPredelayMs * 0.001));
     predelay.setMaximumDelayInSamples (maxPredelaySamples);
@@ -65,8 +79,14 @@ void BackroomsProcessor::prepare (const juce::dsp::ProcessSpec& spec)
     smoothedPredelaySamples.reset (sampleRate, smoothTime);
     smoothedHallHfCutoff.reset (sampleRate, smoothTime);
     smoothedMix.reset (sampleRate, smoothTime);
+    smoothedMuffle.reset (sampleRate, smoothTime);
+    smoothedMuffleCutoff.reset (sampleRate, smoothTime);
+    smoothedMuffleMidDb.reset (sampleRate, smoothTime);
+    smoothedMuffleDrive.reset (sampleRate, smoothTime);
+    smoothedMuffleThreshold.reset (sampleRate, smoothTime);
 
     wetBuffer.setSize (numChannels, static_cast<int> (spec.maximumBlockSize));
+    muffleBuffer.setSize (numChannels, static_cast<int> (spec.maximumBlockSize));
 
     *highPass.state = *juce::dsp::IIR::Coefficients<float>::makeHighPass (sampleRate, kHpfHz);
 
@@ -74,8 +94,12 @@ void BackroomsProcessor::prepare (const juce::dsp::ProcessSpec& spec)
     compressor.setAttack (20.0f);
     compressor.setRelease (120.0f);
 
+    muffleCompressor.setRatio (6.0f);
+    muffleCompressor.setAttack (10.0f);
+    muffleCompressor.setRelease (80.0f);
+
     reset();
-    setParameters (corner, hall, depth, mix);
+    setParameters (corner, hall, depth, mix, muffle);
 }
 
 void BackroomsProcessor::reset()
@@ -85,24 +109,31 @@ void BackroomsProcessor::reset()
     lowPass2.reset();
     midPeak.reset();
     hallHighShelf.reset();
+    muffleLpf1.reset();
+    muffleLpf2.reset();
+    muffleMidPeak.reset();
     predelay.reset();
     reverb.reset();
     compressor.reset();
+    muffleCompressor.reset();
 }
 
 void BackroomsProcessor::setParameters (float cornerPercent,
                                         float hallPercent,
                                         float depthPercent,
-                                        float mixPercent)
+                                        float mixPercent,
+                                        float mufflePercent)
 {
     corner = juce::jlimit (0.0f, 100.0f, cornerPercent);
     hall = juce::jlimit (0.0f, 100.0f, hallPercent);
     depth = juce::jlimit (0.0f, 100.0f, depthPercent);
     mix = juce::jlimit (0.0f, 100.0f, mixPercent);
+    muffle = juce::jlimit (0.0f, 100.0f, mufflePercent);
 
     const auto cornerNorm = corner * 0.01f;
     const auto depthNorm = depth * 0.01f;
     const auto hallNorm = hall * 0.01f;
+    const auto muffleNorm = muffle * 0.01f;
 
     const auto cutoff = mapCornerToCutoffHz (cornerNorm) * mapDepthToCutoffMultiplier (depthNorm);
     smoothedCutoff.setTargetValue (juce::jlimit (kMinCutoffHz, kMaxCutoffHz, cutoff));
@@ -118,8 +149,15 @@ void BackroomsProcessor::setParameters (float cornerPercent,
     smoothedHallHfCutoff.setTargetValue (lerp (kMaxHallHfCutoffHz, kMinHallHfCutoffHz, hallNorm));
     smoothedMix.setTargetValue (mix * 0.01f);
 
+    smoothedMuffle.setTargetValue (muffleNorm);
+    smoothedMuffleCutoff.setTargetValue (lerp (kMuffleMaxCutoffHz, kMuffleMinCutoffHz, muffleNorm));
+    smoothedMuffleMidDb.setTargetValue (lerp (0.0f, kMuffleMaxMidDb, muffleNorm));
+    smoothedMuffleDrive.setTargetValue (lerp (kMuffleMinDrive, kMuffleMaxDrive, muffleNorm));
+    smoothedMuffleThreshold.setTargetValue (lerp (kMuffleMaxThresholdDb, kMuffleMinThresholdDb, muffleNorm));
+
     updateCoefficients();
     updateReverbParameters();
+    updateMuffleCoefficients();
 }
 
 void BackroomsProcessor::advanceSmoothedWetTargets (int numSteps)
@@ -139,6 +177,17 @@ void BackroomsProcessor::advanceSmoothedWetTargets (int numSteps)
     }
 }
 
+void BackroomsProcessor::advanceSmoothedMuffleTargets (int numSteps)
+{
+    for (int i = 0; i < numSteps; ++i)
+    {
+        smoothedMuffleCutoff.getNextValue();
+        smoothedMuffleMidDb.getNextValue();
+        smoothedMuffleDrive.getNextValue();
+        smoothedMuffleThreshold.getNextValue();
+    }
+}
+
 void BackroomsProcessor::updateCoefficients()
 {
     const auto cutoff = smoothedCutoff.getCurrentValue();
@@ -149,6 +198,17 @@ void BackroomsProcessor::updateCoefficients()
         sampleRate, kMidPeakHz, kMidPeakQ, juce::Decibels::decibelsToGain (smoothedMidGainDb.getCurrentValue()));
     *hallHighShelf.state = *juce::dsp::IIR::Coefficients<float>::makeLowPass (
         sampleRate, smoothedHallHfCutoff.getCurrentValue());
+}
+
+void BackroomsProcessor::updateMuffleCoefficients()
+{
+    const auto cutoff = smoothedMuffleCutoff.getCurrentValue();
+    const auto lpfCoeffs = juce::dsp::IIR::Coefficients<float>::makeLowPass (sampleRate, cutoff);
+    *muffleLpf1.state = *lpfCoeffs;
+    *muffleLpf2.state = *lpfCoeffs;
+    *muffleMidPeak.state = *juce::dsp::IIR::Coefficients<float>::makePeakFilter (
+        sampleRate, kMuffleMidPeakHz, kMuffleMidPeakQ,
+        juce::Decibels::decibelsToGain (smoothedMuffleMidDb.getCurrentValue()));
 }
 
 void BackroomsProcessor::updateReverbParameters()
@@ -178,6 +238,27 @@ void BackroomsProcessor::applyPredelay (juce::dsp::AudioBlock<float>& block)
             data[i] = predelay.popSample (static_cast<int> (ch));
         }
     }
+}
+
+void BackroomsProcessor::applyMuffleSoftClip (juce::dsp::AudioBlock<float>& block, float drive)
+{
+    for (size_t ch = 0; ch < block.getNumChannels(); ++ch)
+    {
+        auto* data = block.getChannelPointer (ch);
+        for (size_t i = 0; i < block.getNumSamples(); ++i)
+            data[i] = std::tanh (data[i] * drive);
+    }
+}
+
+void BackroomsProcessor::processMuffleChain (juce::dsp::AudioBlock<float>& block)
+{
+    juce::dsp::ProcessContextReplacing<float> ctx (block);
+    muffleLpf1.process (ctx);
+    muffleLpf2.process (ctx);
+    muffleMidPeak.process (ctx);
+    applyMuffleSoftClip (block, smoothedMuffleDrive.getCurrentValue());
+    muffleCompressor.setThreshold (smoothedMuffleThreshold.getCurrentValue());
+    muffleCompressor.process (ctx);
 }
 
 void BackroomsProcessor::process (juce::AudioBuffer<float>& buffer)
@@ -223,6 +304,32 @@ void BackroomsProcessor::process (juce::AudioBuffer<float>& buffer)
             const auto wetAmount = smoothedMix.getNextValue();
             const auto dryAmount = 1.0f - wetAmount;
             dry[i] = dry[i] * dryAmount + wet[i] * wetAmount;
+        }
+    }
+
+    muffleBuffer.makeCopyOf (buffer, true);
+
+    for (int offset = 0; offset < numSamples; offset += kSmoothUpdateInterval)
+    {
+        const auto chunkSize = juce::jmin (kSmoothUpdateInterval, numSamples - offset);
+
+        advanceSmoothedMuffleTargets (chunkSize);
+        updateMuffleCoefficients();
+
+        juce::dsp::AudioBlock<float> muffleFull (muffleBuffer);
+        auto muffleSub = muffleFull.getSubBlock (static_cast<size_t> (offset), static_cast<size_t> (chunkSize));
+        processMuffleChain (muffleSub);
+    }
+
+    for (int ch = 0; ch < buffer.getNumChannels(); ++ch)
+    {
+        auto* mixed = buffer.getWritePointer (ch);
+        const auto* muffled = muffleBuffer.getReadPointer (ch);
+
+        for (int i = 0; i < numSamples; ++i)
+        {
+            const auto muffleAmount = smoothedMuffle.getNextValue();
+            mixed[i] = mixed[i] * (1.0f - muffleAmount) + muffled[i] * muffleAmount;
         }
     }
 }

@@ -26,18 +26,21 @@ private:
     juce::Slider hallSlider;
     juce::Slider depthSlider;
     juce::Slider mixSlider;
+    juce::Slider muffleSlider;
 
     juce::Label cornerLabel;
     juce::Label hallLabel;
     juce::Label depthLabel;
     juce::Label mixLabel;
-    juce::Label titleLabel;
+    juce::Label muffleLabel;
+    juce::Label headerLabel;
 
     using SliderAttachment = juce::AudioProcessorValueTreeState::SliderAttachment;
     std::unique_ptr<SliderAttachment> cornerAttachment;
     std::unique_ptr<SliderAttachment> hallAttachment;
     std::unique_ptr<SliderAttachment> depthAttachment;
     std::unique_ptr<SliderAttachment> mixAttachment;
+    std::unique_ptr<SliderAttachment> muffleAttachment;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (BackroomsMufflerAudioProcessorEditor)
 };

@@ -70,7 +70,7 @@ TEST_CASE ("Processor prepares and processes silence without NaNs", "[dsp]")
     BackroomsProcessor processor;
     juce::dsp::ProcessSpec spec { 48000.0, 512, 2 };
     processor.prepare (spec);
-    processor.setParameters (10.0f, 50.0f, 80.0f, 100.0f);
+    processor.setParameters (10.0f, 50.0f, 80.0f, 100.0f, 0.0f);
 
     juce::AudioBuffer<float> buffer (2, 512);
     buffer.clear();
@@ -97,8 +97,8 @@ TEST_CASE ("Low corner produces different output than high corner on noise", "[d
     auto clearBuf = makeNoise();
     muffledBuf.makeCopyOf (clearBuf);
 
-    muffled.setParameters (0.0f, 0.0f, 0.0f, 100.0f);
-    clear.setParameters (100.0f, 0.0f, 0.0f, 100.0f);
+    muffled.setParameters (0.0f, 0.0f, 0.0f, 100.0f, 0.0f);
+    clear.setParameters (100.0f, 0.0f, 0.0f, 100.0f, 0.0f);
 
     muffled.process (muffledBuf);
     clear.process (clearBuf);
@@ -121,8 +121,8 @@ TEST_CASE ("Hall setting changes processed output character", "[dsp]")
     shortBuf.makeCopyOf (input);
     longBuf.makeCopyOf (input);
 
-    shortHall.setParameters (25.0f, 0.0f, 40.0f, 100.0f);
-    longHall.setParameters (25.0f, 100.0f, 40.0f, 100.0f);
+    shortHall.setParameters (25.0f, 0.0f, 40.0f, 100.0f, 0.0f);
+    longHall.setParameters (25.0f, 100.0f, 40.0f, 100.0f, 0.0f);
 
     shortHall.process (shortBuf);
     longHall.process (longBuf);
@@ -140,7 +140,7 @@ TEST_CASE ("Mix at 0 percent leaves input unchanged", "[dsp]")
     auto output = makeNoise();
     output.makeCopyOf (input);
 
-    processor.setParameters (20.0f, 50.0f, 40.0f, 0.0f);
+    processor.setParameters (20.0f, 50.0f, 40.0f, 0.0f, 0.0f);
     processor.process (output);
 
     REQUIRE (measureDifferenceRms (input, output) == Catch::Approx (0.0).margin (1.0e-5));
@@ -156,7 +156,7 @@ TEST_CASE ("Mix at 100 percent engages the wet path", "[dsp]")
     auto output = makeNoise();
     output.makeCopyOf (input);
 
-    processor.setParameters (20.0f, 50.0f, 40.0f, 100.0f);
+    processor.setParameters (20.0f, 50.0f, 40.0f, 100.0f, 0.0f);
     processor.process (output);
 
     REQUIRE (measureDifferenceRms (input, output) > 0.01);
@@ -181,9 +181,9 @@ TEST_CASE ("Mix increases wet contribution monotonically", "[dsp]")
     midBuf.makeCopyOf (input);
     wetBuf.makeCopyOf (input);
 
-    dryMix.setParameters (25.0f, 60.0f, 50.0f, 0.0f);
-    midMix.setParameters (25.0f, 60.0f, 50.0f, 50.0f);
-    wetMix.setParameters (25.0f, 60.0f, 50.0f, 100.0f);
+    dryMix.setParameters (25.0f, 60.0f, 50.0f, 0.0f, 0.0f);
+    midMix.setParameters (25.0f, 60.0f, 50.0f, 50.0f, 0.0f);
+    wetMix.setParameters (25.0f, 60.0f, 50.0f, 100.0f, 0.0f);
 
     dryMix.process (dryBuf);
     midMix.process (midBuf);
@@ -196,4 +196,90 @@ TEST_CASE ("Mix increases wet contribution monotonically", "[dsp]")
     REQUIRE (wetDeviation > midDeviation);
     REQUIRE (midDeviation > dryDeviation);
     REQUIRE (dryDeviation == Catch::Approx (0.0).margin (1.0e-5));
+}
+
+TEST_CASE ("Muffle at 0 percent leaves mixed output unchanged", "[dsp]")
+{
+    BackroomsProcessor noMuffleA;
+    BackroomsProcessor noMuffleB;
+    juce::dsp::ProcessSpec spec { 48000.0, 2048, 2 };
+    noMuffleA.prepare (spec);
+    noMuffleB.prepare (spec);
+
+    auto input = makeNoise();
+    auto bufA = makeNoise();
+    auto bufB = makeNoise();
+    bufA.makeCopyOf (input);
+    bufB.makeCopyOf (input);
+
+    noMuffleA.setParameters (30.0f, 40.0f, 50.0f, 75.0f, 0.0f);
+    noMuffleB.setParameters (30.0f, 40.0f, 50.0f, 75.0f, 0.0f);
+
+    noMuffleA.process (bufA);
+    noMuffleB.process (bufB);
+
+    REQUIRE (measureDifferenceRms (bufA, bufB) == Catch::Approx (0.0).margin (1.0e-5));
+}
+
+TEST_CASE ("Muffle at 0 percent matches bypass versus full muffle", "[dsp]")
+{
+    BackroomsProcessor bypass;
+    BackroomsProcessor smothered;
+    juce::dsp::ProcessSpec spec { 48000.0, 2048, 2 };
+    bypass.prepare (spec);
+    smothered.prepare (spec);
+
+    auto input = makeNoise();
+    auto bypassBuf = makeNoise();
+    auto smotheredBuf = makeNoise();
+    bypassBuf.makeCopyOf (input);
+    smotheredBuf.makeCopyOf (input);
+
+    bypass.setParameters (30.0f, 40.0f, 50.0f, 75.0f, 0.0f);
+    smothered.setParameters (30.0f, 40.0f, 50.0f, 75.0f, 100.0f);
+
+    bypass.process (bypassBuf);
+    smothered.process (smotheredBuf);
+
+    REQUIRE (measureDifferenceRms (bypassBuf, smotheredBuf) > 0.01);
+}
+
+TEST_CASE ("Muffle at 100 percent reduces high frequency energy", "[dsp]")
+{
+    BackroomsProcessor none;
+    BackroomsProcessor full;
+    juce::dsp::ProcessSpec spec { 48000.0, 4096, 2 };
+    none.prepare (spec);
+    full.prepare (spec);
+
+    auto input = makeNoise();
+    auto noneBuf = makeNoise();
+    auto fullBuf = makeNoise();
+    noneBuf.makeCopyOf (input);
+    fullBuf.makeCopyOf (input);
+
+    none.setParameters (25.0f, 40.0f, 30.0f, 100.0f, 0.0f);
+    full.setParameters (25.0f, 40.0f, 30.0f, 100.0f, 100.0f);
+
+    none.process (noneBuf);
+    full.process (fullBuf);
+
+    REQUIRE (measureHighFreqEnergy (noneBuf) > measureHighFreqEnergy (fullBuf));
+    REQUIRE (measureDifferenceRms (noneBuf, fullBuf) > 0.01);
+}
+
+TEST_CASE ("Muffle at 100 percent engages output processing", "[dsp]")
+{
+    BackroomsProcessor processor;
+    juce::dsp::ProcessSpec spec { 48000.0, 2048, 2 };
+    processor.prepare (spec);
+
+    auto input = makeNoise();
+    auto output = makeNoise();
+    output.makeCopyOf (input);
+
+    processor.setParameters (20.0f, 30.0f, 20.0f, 100.0f, 100.0f);
+    processor.process (output);
+
+    REQUIRE (measureDifferenceRms (input, output) > 0.01);
 }

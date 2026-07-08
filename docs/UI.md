@@ -1,6 +1,6 @@
 # UI Guidelines
 
-## Palette (v0.2.0)
+## Palette (v0.3.0)
 
 | Element | Hex |
 |---|---|
@@ -13,20 +13,27 @@
 | Ceiling grid | `#6E6A60` |
 | Fluorescent | `#F8FAF4` |
 | Fluorescent tint | `#D4E6CC` |
-| Label text | `#2A2418` |
-| Knob fill | `#F5F1E8` |
+| Label text | `#F8F4EA` |
+| Knob ring | `#F5F1E8` |
 | Knob accent | `#B8921E` |
-| Control plate | `#F0EBE0` |
+| Muffle accent | `#C4785A` |
+| Control plate | `#1E1A14` @ 72% alpha |
+| Control overlay | black @ 40% (dims wallpaper behind plate) |
+| Plate border | `#B8921E` 1 px |
+| Value background | `#2A2418` |
+| Value text | `#F8F4EA` |
+| Value outline | `#B8921E` |
 
 ## Layout
 
-- Window: 480×320 (fixed in v0.2.0)
-- Ceiling bar: 36 px (tiled `ceiling_tile.png` when embedded)
-- Carpet strip: 40 px
-- Control plate: rounded rect behind knob row (~88% opacity)
-- Four rotary knobs: Corner, Hall, Depth, Mix
-- Label pills: 24 px height, light background
-- Value text boxes: 60×20 px, opaque fill + outline
+- Window: **560×360** (fixed in v0.3.0)
+- Ceiling bar: 36 px (tiled `ceiling_tile.png` when embedded); **header title** left-aligned in strip
+- Carpet strip: 40 px (no bottom title pill)
+- Control zone: 40% dark overlay on wallpaper, then frosted dark control plate
+- Five ring knobs: Corner, Hall, Depth, Mix, **Muffle**
+- Knob style: hollow ring with arc + dot indicator (FabFilter-inspired)
+- Label pills: 24 px height, light text on dark plate
+- Value text boxes: 64×22 px, dark background with cream text and gold outline
 
 ## Assets policy
 
@@ -35,7 +42,7 @@
 - Do **not** import textures from Backrooms games, Kane Pixels films, or other copyrighted works without license
 - Procedural fallback exists in `WallpaperComponent` when images are unavailable
 
-### Current assets (v0.2.0)
+### Current assets (v0.2.0+)
 
 | File | Source |
 |---|---|
@@ -45,6 +52,6 @@
 
 ## Implementation
 
-- `BackroomsLookAndFeel` — rotary knob styling, label pills, slider text box colours
-- `WallpaperComponent` — ceiling tile, tiled wallpaper, control plate, carpet
+- `BackroomsLookAndFeel` — ring rotary knobs, frosted panel, label pills, slider text box colours, Muffle accent ring
+- `WallpaperComponent` — ceiling tile, tiled wallpaper, control overlay + plate, carpet
 - Assets embedded via `juce_add_binary_data` → `BinaryData.h`
