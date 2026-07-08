@@ -1,0 +1,34 @@
+---
+description: Backrooms Muffler project identity, stack, and conventions
+alwaysApply: true
+---
+
+# Backrooms Muffler
+
+- **Product:** Backrooms Muffler — liminal room-muffle VST3/AU effect
+- **CMake target:** `BackroomsMuffler` | **Display name:** `Backrooms Muffler`
+- **Stack:** JUCE 8 (submodule), CMake 3.22+, C++20
+- **License:** AGPL-3.0 — keep source open when distributing
+
+## Layout
+
+- `source/dsp/BackroomsProcessor.*` — audio DSP
+- `source/ui/` — Backrooms LookAndFeel and wallpaper
+- `source/PluginProcessor.*` / `PluginEditor.*` — JUCE plugin shell
+- `docs/DSP.md` — parameter curves; read before tuning
+- `docs/BUILD.md` — build, test, Ableton install
+- `docs/UI.md` — palette and asset policy
+
+## Rules
+
+- Do **not** use Projucer; CMake only
+- No heap alloc / locks / file I/O in `processBlock`
+- UI assets must be **original** — no ripped Backrooms game/film art
+- APVTS param IDs: `corner`, `hall`, `depth`, `mix`
+
+## Build
+
+```powershell
+cmake --preset vs2022
+cmake --build --preset vs2022-release
+```

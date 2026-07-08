@@ -1,0 +1,22 @@
+{
+  "version": 1,
+  "hooks": {
+    "sessionStart": [
+      {
+        "command": "powershell -NoProfile -ExecutionPolicy Bypass -File .cursor/hooks/session-start.ps1"
+      }
+    ],
+    "afterFileEdit": [
+      {
+        "command": "powershell -NoProfile -ExecutionPolicy Bypass -File .cursor/hooks/post-edit-hint.ps1",
+        "matcher": "source/"
+      }
+    ],
+    "beforeShellExecution": [
+      {
+        "command": "powershell -NoProfile -ExecutionPolicy Bypass -File .cursor/hooks/guard-clean.ps1",
+        "matcher": "git clean|git reset --hard"
+      }
+    ]
+  }
+}

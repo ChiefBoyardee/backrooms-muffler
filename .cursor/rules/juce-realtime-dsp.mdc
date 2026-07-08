@@ -1,0 +1,24 @@
+---
+description: JUCE real-time DSP constraints for Backrooms Muffler
+globs: source/**
+alwaysApply: false
+---
+
+# Real-Time DSP
+
+- All processing in `BackroomsProcessor::process` must be allocation-free
+- Use `juce::AudioProcessorValueTreeState` for parameters
+- Use `juce::SmoothedValue` for modulated filter/reverb/comp targets
+- Prepare `juce::dsp::*` processors in `prepareToPlay` with `ProcessSpec`
+- Use `juce::ScopedNoDenormals` in `processBlock`
+
+## Parameter semantics
+
+| ID | UI label | Role |
+|---|---|---|
+| corner | Corner | Muffled ↔ clear macro |
+| hall | Hall | Reverb room size |
+| depth | Depth | Extra darkness + level loss |
+| mix | Mix | Global dry/wet |
+
+After DSP changes, run tests and rebuild before claiming done.

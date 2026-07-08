@@ -1,0 +1,20 @@
+---
+description: Backrooms UI palette and asset policy
+globs: source/ui/**,assets/**
+alwaysApply: false
+---
+
+# Backrooms UI
+
+See `docs/UI.md` for full palette.
+
+- Wallpaper: mustard yellow `#D4B84A` / `#E8D174`
+- Carpet: beige `#B8A88A`
+- Ceiling: off-white panels `#E8E4D9`
+- Labels: dark brown `#3D3428`
+
+## Policy
+
+- Original seamless tiles only in `assets/ui/`
+- `BackroomsLookAndFeel` for knobs; `WallpaperComponent` for background
+- No fluorescent flicker animation in v0.1.x (static UI)

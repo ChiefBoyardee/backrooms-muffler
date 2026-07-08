@@ -1,0 +1,1 @@
+JUCE system fonts are used by default. No third-party fonts are bundled in v0.1.0.

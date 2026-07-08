@@ -1,0 +1,31 @@
+---
+description: CMake, CI, pluginval, and Ableton install conventions
+globs: CMakeLists.txt,**/*.cmake,.github/**
+alwaysApply: false
+---
+
+# Build and Test
+
+## Presets
+
+- Windows: `cmake --preset vs2022` then `cmake --build --preset vs2022-release`
+- macOS: `cmake --preset ninja-release` then `cmake --build --preset ninja-release`
+
+## VST3 output (Windows)
+
+`build/BackroomsMuffler_artefacts/Release/VST3/Backrooms Muffler.vst3`
+
+Install to: `C:\Program Files\Common Files\VST3\`
+
+## pluginval
+
+```powershell
+pluginval.exe --strictness-level 5 --skip-gui-tests --validate "<path-to-vst3>"
+```
+
+CI must fail when pluginval exit code ≠ 0.
+
+## Formats
+
+- Windows/Linux: VST3 + Standalone
+- macOS: VST3 + AU + Standalone

@@ -1,0 +1,16 @@
+---
+description: MCP tool routing for Backrooms Muffler development
+alwaysApply: true
+---
+
+# MCP Tool Routing
+
+| Need | Tool |
+|---|---|
+| JUCE API, CMake plugin options, `dsp::` module | **context7** — library `/websites/juce_master` |
+| Ableton/VST3/pluginval/web DSP research | **brave-search** MCP (`brave_web_search`) |
+| Multi-step architecture or DSP design reasoning | **thoughtbox** MCP (`thoughtbox_gateway`) |
+
+Read `docs/DSP.md` before tuning audio. Read `docs/BUILD.md` before changing CI.
+
+Do not guess JUCE APIs — query context7 when unsure.

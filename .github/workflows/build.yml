@@ -1,0 +1,70 @@
+name: Build and Validate
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            cmake_preset: vs2022
+            build_preset: vs2022-release
+            config: Release
+          - os: macos-latest
+            cmake_preset: ninja-release
+            build_preset: ninja-release
+            config: Release
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Configure
+        run: cmake --preset ${{ matrix.cmake_preset }}
+
+      - name: Build
+        run: cmake --build --preset ${{ matrix.build_preset }}
+
+      - name: Test
+        run: ctest --test-dir build -C ${{ matrix.config }} --output-on-failure
+
+      - name: Download pluginval
+        shell: bash
+        run: |
+          curl -LO "https://github.com/Tracktion/pluginval/releases/latest/download/pluginval_${{ runner.os }}.zip"
+          unzip -q "pluginval_${{ runner.os }}.zip"
+
+      - name: Validate VST3 (Unix)
+        if: runner.os != 'Windows'
+        shell: bash
+        run: |
+          PLUG=$(find build -type d -name "Backrooms Muffler.vst3" | head -1)
+          test -n "$PLUG"
+          chmod +x ./pluginval
+          ./pluginval --strictness-level 5 --skip-gui-tests --validate "$PLUG"
+
+      - name: Validate VST3 (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $pv = (Get-ChildItem -Recurse -Filter pluginval.exe | Select-Object -First 1).FullName
+          $plug = Get-ChildItem build -Recurse -Directory -Filter "Backrooms Muffler.vst3" | Select-Object -First 1 -ExpandProperty FullName
+          if (-not $plug) { throw "VST3 bundle not found" }
+          $p = Start-Process -FilePath $pv -NoNewWindow -Wait -PassThru `
+            -ArgumentList @('--strictness-level','5','--skip-gui-tests','--validate',$plug)
+          if ($p.ExitCode -ne 0) { throw "pluginval failed with exit $($p.ExitCode)" }
+
+      - name: Upload VST3 artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: BackroomsMuffler-vst3-${{ matrix.os }}
+          path: build/**/VST3/*.vst3
