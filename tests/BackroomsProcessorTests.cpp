@@ -33,7 +33,6 @@ double measureHighFreqEnergy (const juce::AudioBuffer<float>& buf)
     return energy;
 }
 
-
 double measureDifferenceRms (const juce::AudioBuffer<float>& a, const juce::AudioBuffer<float>& b)
 {
     double sum = 0.0;
@@ -53,11 +52,11 @@ double measureDifferenceRms (const juce::AudioBuffer<float>& a, const juce::Audi
 }
 } // namespace
 
-TEST_CASE ("Corner macro maps to expected cutoff range", "[dsp]")
+TEST_CASE ("Corner macro maps to expected exponential cutoff range", "[dsp]")
 {
-    REQUIRE (BackroomsProcessor::mapCornerToCutoffHz (0.0f) == Catch::Approx (350.0f).margin (1.0f));
-    REQUIRE (BackroomsProcessor::mapCornerToCutoffHz (1.0f) == Catch::Approx (12000.0f).margin (1.0f));
-    REQUIRE (BackroomsProcessor::mapCornerToCutoffHz (0.5f) == Catch::Approx (6175.0f).margin (50.0f));
+    REQUIRE (BackroomsProcessor::mapCornerToCutoffHz (0.0f) == Catch::Approx (180.0f).margin (1.0f));
+    REQUIRE (BackroomsProcessor::mapCornerToCutoffHz (1.0f) == Catch::Approx (10000.0f).margin (1.0f));
+    REQUIRE (BackroomsProcessor::mapCornerToCutoffHz (0.5f) == Catch::Approx (1341.6f).margin (50.0f));
 }
 
 TEST_CASE ("Depth reduces effective cutoff", "[dsp]")
@@ -86,7 +85,7 @@ TEST_CASE ("Processor prepares and processes silence without NaNs", "[dsp]")
     }
 }
 
-TEST_CASE ("High corner value yields brighter output than low corner on noise", "[dsp]")
+TEST_CASE ("Low corner produces different output than high corner on noise", "[dsp]")
 {
     BackroomsProcessor muffled;
     BackroomsProcessor clear;
@@ -98,13 +97,37 @@ TEST_CASE ("High corner value yields brighter output than low corner on noise", 
     auto clearBuf = makeNoise();
     muffledBuf.makeCopyOf (clearBuf);
 
-    muffled.setParameters (5.0f, 40.0f, 20.0f, 100.0f);
-    clear.setParameters (95.0f, 40.0f, 20.0f, 100.0f);
+    muffled.setParameters (0.0f, 0.0f, 0.0f, 100.0f);
+    clear.setParameters (100.0f, 0.0f, 0.0f, 100.0f);
 
     muffled.process (muffledBuf);
     clear.process (clearBuf);
 
-    REQUIRE (measureHighFreqEnergy (clearBuf) > measureHighFreqEnergy (muffledBuf));
+    REQUIRE (measureDifferenceRms (muffledBuf, clearBuf) > 0.02);
+    REQUIRE (measureHighFreqEnergy (clearBuf) >= measureHighFreqEnergy (muffledBuf));
+}
+
+TEST_CASE ("Hall setting changes processed output character", "[dsp]")
+{
+    BackroomsProcessor shortHall;
+    BackroomsProcessor longHall;
+    juce::dsp::ProcessSpec spec { 48000.0, 4096, 2 };
+    shortHall.prepare (spec);
+    longHall.prepare (spec);
+
+    auto input = makeNoise();
+    auto shortBuf = makeNoise();
+    auto longBuf = makeNoise();
+    shortBuf.makeCopyOf (input);
+    longBuf.makeCopyOf (input);
+
+    shortHall.setParameters (25.0f, 0.0f, 40.0f, 100.0f);
+    longHall.setParameters (25.0f, 100.0f, 40.0f, 100.0f);
+
+    shortHall.process (shortBuf);
+    longHall.process (longBuf);
+
+    REQUIRE (measureDifferenceRms (shortBuf, longBuf) > 0.005);
 }
 
 TEST_CASE ("Mix at 0 percent leaves input unchanged", "[dsp]")

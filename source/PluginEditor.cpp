@@ -22,6 +22,8 @@ BackroomsMufflerAudioProcessorEditor::BackroomsMufflerAudioProcessorEditor (
                                                   BinaryData::wallpaper_tile_pngSize));
     wallpaper.setCarpetImage (loadEmbeddedPng (BinaryData::carpet_tile_png,
                                                BinaryData::carpet_tile_pngSize));
+    wallpaper.setCeilingImage (loadEmbeddedPng (BinaryData::ceiling_tile_png,
+                                                BinaryData::ceiling_tile_pngSize));
     addAndMakeVisible (wallpaper);
 
     configureSlider (cornerSlider, "Corner");
@@ -65,7 +67,7 @@ void BackroomsMufflerAudioProcessorEditor::configureSlider (juce::Slider& slider
 {
     juce::ignoreUnused (name);
     slider.setSliderStyle (juce::Slider::RotaryHorizontalVerticalDrag);
-    slider.setTextBoxStyle (juce::Slider::TextBoxBelow, false, 56, 18);
+    slider.setTextBoxStyle (juce::Slider::TextBoxBelow, false, 60, 20);
     slider.setPopupDisplayEnabled (true, false, this);
     addAndMakeVisible (slider);
 }
@@ -83,10 +85,12 @@ void BackroomsMufflerAudioProcessorEditor::resized()
     const auto controlArea = layoutArea.withTrimmedTop (48).withTrimmedBottom (72);
     const auto knobWidth = controlArea.getWidth() / 4;
 
+    wallpaper.setControlPlateBounds (controlArea.expanded (8, 6));
+
     auto placeKnob = [&] (juce::Slider& slider, juce::Label& label, int index)
     {
         auto slot = controlArea.withWidth (knobWidth).withX (controlArea.getX() + index * knobWidth);
-        label.setBounds (slot.removeFromTop (20));
+        label.setBounds (slot.removeFromTop (24));
         slider.setBounds (slot.reduced (4));
     };
 
