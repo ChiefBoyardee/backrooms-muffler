@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.22)
 
-project(BackroomsMuffler VERSION 0.1.0)
+project(BackroomsMuffler VERSION 0.2.0)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -30,7 +30,8 @@ juce_add_plugin(BackroomsMuffler
 juce_add_binary_data(BackroomsAssets
     SOURCES
         assets/ui/wallpaper_tile.png
-        assets/ui/carpet_tile.png)
+        assets/ui/carpet_tile.png
+        assets/ui/ceiling_tile.png)
 
 target_sources(BackroomsMuffler
     PRIVATE

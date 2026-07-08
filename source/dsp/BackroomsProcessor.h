@@ -19,6 +19,7 @@ private:
     void advanceSmoothedWetTargets (int numSteps);
     void updateCoefficients();
     void updateReverbParameters();
+    void applyPredelay (juce::dsp::AudioBlock<float>& block);
 
     double sampleRate = 44100.0;
     int numChannels = 2;
@@ -35,15 +36,23 @@ private:
     juce::SmoothedValue<float, juce::ValueSmoothingTypes::Linear> smoothedDepthGain;
     juce::SmoothedValue<float, juce::ValueSmoothingTypes::Linear> smoothedRoomSize;
     juce::SmoothedValue<float, juce::ValueSmoothingTypes::Linear> smoothedDamping;
+    juce::SmoothedValue<float, juce::ValueSmoothingTypes::Linear> smoothedReverbWidth;
+    juce::SmoothedValue<float, juce::ValueSmoothingTypes::Linear> smoothedPredelaySamples;
+    juce::SmoothedValue<float, juce::ValueSmoothingTypes::Linear> smoothedHallHfCutoff;
     juce::SmoothedValue<float, juce::ValueSmoothingTypes::Linear> smoothedMix;
 
     using Filter = juce::dsp::ProcessorDuplicator<juce::dsp::IIR::Filter<float>,
                                                   juce::dsp::IIR::Coefficients<float>>;
 
+    using DelayLine = juce::dsp::DelayLine<float, juce::dsp::DelayLineInterpolationTypes::Linear>;
+
     Filter highPass;
     Filter lowPass;
+    Filter lowPass2;
     Filter midPeak;
+    Filter hallHighShelf;
 
+    DelayLine predelay;
     juce::dsp::Reverb reverb;
     juce::dsp::Compressor<float> compressor;
 

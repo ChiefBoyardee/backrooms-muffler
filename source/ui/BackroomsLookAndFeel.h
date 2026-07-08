@@ -4,18 +4,19 @@
 
 namespace BackroomsColours
 {
-inline const juce::Colour wallpaperBase { 0xffd4b84a };
-inline const juce::Colour wallpaperHighlight { 0xffe8d174 };
-inline const juce::Colour wallpaperSeam { 0xffb89a38 };
-inline const juce::Colour carpetBase { 0xffb8a88a };
-inline const juce::Colour carpetSpeckle { 0xff9a8b72 };
-inline const juce::Colour ceilingPanel { 0xffe8e4d9 };
-inline const juce::Colour ceilingGrid { 0xff8a8578 };
-inline const juce::Colour fluorescent { 0xfff5f8f2 };
-inline const juce::Colour fluorescentTint { 0xffd8e8d0 };
-inline const juce::Colour labelText { 0xff3d3428 };
-inline const juce::Colour knobFill { 0xfff0ede6 };
-inline const juce::Colour knobAccent { 0xffc9a227 };
+inline const juce::Colour wallpaperBase { 0xffc9a83a };
+inline const juce::Colour wallpaperHighlight { 0xffe2c45a };
+inline const juce::Colour wallpaperSeam { 0xffa8872e };
+inline const juce::Colour carpetBase { 0xff8f7d62 };
+inline const juce::Colour carpetSpeckle { 0xff6e5f4c };
+inline const juce::Colour ceilingPanel { 0xffe4e0d4 };
+inline const juce::Colour ceilingGrid { 0xff6e6a60 };
+inline const juce::Colour fluorescent { 0xfff8faf4 };
+inline const juce::Colour fluorescentTint { 0xffd4e6cc };
+inline const juce::Colour labelText { 0xff2a2418 };
+inline const juce::Colour knobFill { 0xfff5f1e8 };
+inline const juce::Colour knobAccent { 0xffb8921e };
+inline const juce::Colour controlPlate { 0xfff0ebe0 };
 } // namespace BackroomsColours
 
 class BackroomsLookAndFeel : public juce::LookAndFeel_V4
@@ -27,8 +28,8 @@ public:
         setColour (juce::Slider::rotarySliderOutlineColourId, BackroomsColours::ceilingGrid);
         setColour (juce::Slider::thumbColourId, BackroomsColours::fluorescent);
         setColour (juce::Slider::textBoxTextColourId, BackroomsColours::labelText);
-        setColour (juce::Slider::textBoxBackgroundColourId, juce::Colours::transparentBlack);
-        setColour (juce::Slider::textBoxOutlineColourId, juce::Colours::transparentBlack);
+        setColour (juce::Slider::textBoxBackgroundColourId, BackroomsColours::knobFill);
+        setColour (juce::Slider::textBoxOutlineColourId, BackroomsColours::ceilingGrid);
         setColour (juce::Label::textColourId, BackroomsColours::labelText);
     }
 
@@ -56,7 +57,7 @@ public:
         g.setColour (BackroomsColours::knobFill);
         g.fillEllipse (centre.x - radius, centre.y - radius, radius * 2.0f, radius * 2.0f);
 
-        g.setColour (BackroomsColours::ceilingGrid.withAlpha (0.35f));
+        g.setColour (BackroomsColours::ceilingGrid.withAlpha (0.45f));
         g.drawEllipse (centre.x - radius, centre.y - radius, radius * 2.0f, radius * 2.0f, 1.5f);
 
         juce::Path arc;
@@ -71,9 +72,27 @@ public:
         g.fillPath (pointer, juce::AffineTransform::rotation (angle).translated (centre.x, centre.y));
     }
 
+    void drawLabel (juce::Graphics& g, juce::Label& label) override
+    {
+        const auto textArea = label.getLocalBounds().toFloat().reduced (2.0f, 1.0f);
+        g.setColour (BackroomsColours::knobFill.withAlpha (0.92f));
+        g.fillRoundedRectangle (textArea, 4.0f);
+        g.setColour (BackroomsColours::ceilingGrid.withAlpha (0.35f));
+        g.drawRoundedRectangle (textArea, 4.0f, 1.0f);
+
+        g.setColour (label.findColour (juce::Label::textColourId));
+        g.setFont (getLabelFont (label));
+        g.drawFittedText (label.getText(), textArea.toNearestInt(), label.getJustificationType(), 1);
+    }
+
     juce::Font getLabelFont (juce::Label&) override
     {
-        return juce::FontOptions (13.0f).withStyle ("Bold");
+        return juce::FontOptions (14.0f).withStyle ("Bold");
+    }
+
+    juce::Font getSliderPopupFont (juce::Slider&) override
+    {
+        return juce::FontOptions (14.0f).withStyle ("Bold");
     }
 };
 
@@ -82,6 +101,13 @@ class WallpaperComponent : public juce::Component
 public:
     void setWallpaperImage (const juce::Image& image) { wallpaper = image; repaint(); }
     void setCarpetImage (const juce::Image& image) { carpet = image; repaint(); }
+    void setCeilingImage (const juce::Image& image) { ceiling = image; repaint(); }
+
+    void setControlPlateBounds (juce::Rectangle<int> bounds)
+    {
+        controlPlateBounds = bounds;
+        repaint();
+    }
 
     void paint (juce::Graphics& g) override
     {
@@ -97,6 +123,16 @@ public:
         else
             paintProceduralWallpaper (g, wallArea);
 
+        if (controlPlateBounds.getWidth() > 0)
+        {
+            g.setColour (juce::Colours::black.withAlpha (0.15f));
+            g.fillRoundedRectangle (controlPlateBounds.toFloat(), 8.0f);
+            g.setColour (BackroomsColours::controlPlate.withAlpha (0.88f));
+            g.fillRoundedRectangle (controlPlateBounds.toFloat(), 8.0f);
+            g.setColour (BackroomsColours::ceilingGrid.withAlpha (0.4f));
+            g.drawRoundedRectangle (controlPlateBounds.toFloat().reduced (0.5f), 8.0f, 1.0f);
+        }
+
         const auto carpetArea = bounds.removeFromBottom (carpetHeight);
         if (carpet.isValid())
             paintTiledImage (g, carpetArea, carpet);
@@ -107,6 +143,8 @@ public:
 private:
     juce::Image wallpaper;
     juce::Image carpet;
+    juce::Image ceiling;
+    juce::Rectangle<int> controlPlateBounds;
 
     static void paintTiledImage (juce::Graphics& g, juce::Rectangle<int> area, const juce::Image& image)
     {
@@ -116,9 +154,7 @@ private:
         for (int y = area.getY(); y < area.getBottom(); y += tileH)
         {
             for (int x = area.getX(); x < area.getRight(); x += tileW)
-            {
                 g.drawImageAt (image, x, y);
-            }
         }
     }
 
@@ -154,8 +190,18 @@ private:
         }
     }
 
-    static void paintCeiling (juce::Graphics& g, juce::Rectangle<int> area)
+    void paintCeiling (juce::Graphics& g, juce::Rectangle<int> area)
     {
+        if (ceiling.isValid())
+        {
+            paintTiledImage (g, area, ceiling);
+
+            g.setColour (BackroomsColours::fluorescent.withAlpha (0.85f));
+            const auto light = area.reduced (area.getWidth() / 4, 10).withHeight (8);
+            g.fillRoundedRectangle (light.toFloat(), 2.0f);
+            return;
+        }
+
         g.setColour (BackroomsColours::ceilingPanel);
         g.fillRect (area);
 

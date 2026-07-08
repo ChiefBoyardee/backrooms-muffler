@@ -17,3 +17,6 @@ _DependencyInformation/
 *.app
 .DS_Store
 Thumbs.db
+assets/ui/_src/
+pluginval.exe
+pluginval_*.zip
