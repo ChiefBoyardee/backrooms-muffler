@@ -13,13 +13,11 @@ jobs:
       matrix:
         include:
           - os: windows-latest
-            cmake_preset: vs2022
-            build_preset: vs2022-release
-            config: Release
+            cmake_preset: ninja-release
+            build_preset: ninja-release
           - os: macos-latest
             cmake_preset: ninja-release
             build_preset: ninja-release
-            config: Release
 
     runs-on: ${{ matrix.os }}
 
@@ -41,7 +39,7 @@ jobs:
         run: cmake --build --preset ${{ matrix.build_preset }}
 
       - name: Test
-        run: ctest --test-dir build -C ${{ matrix.config }} --output-on-failure
+        run: ctest --test-dir build --output-on-failure
 
       - name: Download pluginval
         shell: bash
