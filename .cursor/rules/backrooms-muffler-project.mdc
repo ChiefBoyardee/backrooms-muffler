@@ -24,7 +24,7 @@ alwaysApply: true
 - Do **not** use Projucer; CMake only
 - No heap alloc / locks / file I/O in `processBlock`
 - UI assets must be **original** — no ripped Backrooms game/film art
-- APVTS param IDs: `corner`, `hall`, `depth`, `mix`
+- APVTS param IDs: `corner`, `hall`, `depth`, `mix`, `muffle`
 
 ## Build
 

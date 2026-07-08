@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-07-08
+
+### Added
+
+- **Muffle** control — post-mix pillow-over-speaker chain (LPF, mid peak, soft clip, compressor) on full output
+- Ring-style knobs with frosted dark control panel and header title strip
+- Muffle unit tests (bypass, HF reduction, output engagement)
+
+### Changed
+
+- Editor resized to 560×360 with five knobs (Corner, Hall, Depth, Mix, Muffle)
+- Value readout boxes use dark background with cream text for readability on frosted panel
+- Muffle knob uses dusty gold-rose accent (`#C4785A`) to distinguish from spatial controls
+
 ## [0.2.0] - 2026-07-08
 
 ### Added
@@ -42,6 +56,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Filter and reverb parameter updates subsampled every 16 samples for reduced zipper noise
 - Per-sample smoothed Mix blend; Hall room size and damping smoothed
 
-[Unreleased]: https://github.com/ChiefBoyardee/backrooms-muffler/compare/v0.2.0...HEAD
+[Unreleased]: https://github.com/ChiefBoyardee/backrooms-muffler/compare/v0.3.0...HEAD
+[0.3.0]: https://github.com/ChiefBoyardee/backrooms-muffler/releases/tag/v0.3.0
 [0.2.0]: https://github.com/ChiefBoyardee/backrooms-muffler/releases/tag/v0.2.0
 [0.1.0]: https://github.com/ChiefBoyardee/backrooms-muffler/releases/tag/v0.1.0
