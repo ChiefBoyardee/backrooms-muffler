@@ -28,6 +28,12 @@ jobs:
         with:
           submodules: recursive
 
+      - name: Setup MSVC
+        if: runner.os == 'Windows'
+        uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: x64
+
       - name: Configure
         run: cmake --preset ${{ matrix.cmake_preset }}
 
@@ -42,6 +48,11 @@ jobs:
         run: |
           curl -LO "https://github.com/Tracktion/pluginval/releases/latest/download/pluginval_${{ runner.os }}.zip"
           unzip -q "pluginval_${{ runner.os }}.zip"
+          if [ "${{ runner.os }}" = "macOS" ]; then
+            echo "PLUGINVAL_BIN=./pluginval.app/Contents/MacOS/pluginval" >> "$GITHUB_ENV"
+          else
+            echo "PLUGINVAL_BIN=./pluginval.exe" >> "$GITHUB_ENV"
+          fi
 
       - name: Validate VST3 (Unix)
         if: runner.os != 'Windows'
@@ -49,19 +60,16 @@ jobs:
         run: |
           PLUG=$(find build -type d -name "Backrooms Muffler.vst3" | head -1)
           test -n "$PLUG"
-          chmod +x ./pluginval
-          ./pluginval --strictness-level 5 --skip-gui-tests --validate "$PLUG"
+          chmod +x "$PLUGINVAL_BIN"
+          "$PLUGINVAL_BIN" --strictness-level 5 --skip-gui-tests --validate "$PLUG"
 
       - name: Validate VST3 (Windows)
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
-          $pv = (Get-ChildItem -Recurse -Filter pluginval.exe | Select-Object -First 1).FullName
           $plug = Get-ChildItem build -Recurse -Directory -Filter "Backrooms Muffler.vst3" | Select-Object -First 1 -ExpandProperty FullName
           if (-not $plug) { throw "VST3 bundle not found" }
-          $p = Start-Process -FilePath $pv -NoNewWindow -Wait -PassThru `
-            -ArgumentList @('--strictness-level','5','--skip-gui-tests','--validate',$plug)
-          if ($p.ExitCode -ne 0) { throw "pluginval failed with exit $($p.ExitCode)" }
+          & .\pluginval.exe --strictness-level 5 --skip-gui-tests --validate "$plug"
 
       - name: Upload VST3 artifact
         uses: actions/upload-artifact@v4
